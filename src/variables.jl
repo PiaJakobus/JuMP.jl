@@ -203,7 +203,7 @@ end
 
 Get a variable's name attribute.
 """
-name(v::VariableRef) = MOI.get(owner_model(v), MOI.VariableName(), v)
+name(v::VariableRef) = MOI.get(owner_model(v), MOI.VariableName(), v)::String
 
 """
     set_name(v::VariableRef, s::AbstractString)
@@ -381,7 +381,7 @@ Return the lower bound of a variable. Error if one does not exist. See also
 """
 function lower_bound(v::VariableRef)
     cset = MOI.get(owner_model(v), MOI.ConstraintSet(),
-                   LowerBoundRef(v))::MOI.GreaterThan
+                   LowerBoundRef(v))::MOI.GreaterThan{Float64}
     return cset.lower
 end
 
@@ -460,7 +460,7 @@ Return the upper bound of a variable. Error if one does not exist. See also
 """
 function upper_bound(v::VariableRef)
     cset = MOI.get(owner_model(v), MOI.ConstraintSet(),
-                   UpperBoundRef(v))::MOI.LessThan
+                   UpperBoundRef(v))::MOI.LessThan{Float64}
     return cset.upper
 end
 
@@ -539,7 +539,8 @@ Return the value to which a variable is fixed. Error if one does not exist. See
 also [`is_fixed`](@ref).
 """
 function fix_value(v::VariableRef)
-    cset = MOI.get(owner_model(v), MOI.ConstraintSet(), FixRef(v))::MOI.EqualTo
+    cset = MOI.get(owner_model(v), MOI.ConstraintSet(),
+                   FixRef(v))::MOI.EqualTo{Float64}
     return cset.value
 end
 
@@ -682,7 +683,8 @@ Return the start value (MOI attribute `VariablePrimalStart`) of the variable
 `v`. See also [`set_start_value`](@ref).
 """
 function start_value(v::VariableRef)
-    return MOI.get(owner_model(v), MOI.VariablePrimalStart(), v)
+    return MOI.get(
+        owner_model(v), MOI.VariablePrimalStart(), v)::Union{Nothing, Float64}
 end
 
 
@@ -693,7 +695,8 @@ Set the start value (MOI attribute `VariablePrimalStart`) of the variable `v` to
 `value`.
 """
 function set_start_value(variable::VariableRef, value::Number)
-    return MOI.set(owner_model(variable), MOI.VariablePrimalStart(), variable, value)
+    return MOI.set(owner_model(variable), MOI.VariablePrimalStart(), variable,
+                   convert(Float64, value))
 end
 
 """
@@ -702,7 +705,9 @@ end
 Get the value of this variable in the result returned by a solver. Use
 [`has_values`](@ref) to check if a result exists before asking for values.
 """
-value(v::VariableRef) = MOI.get(owner_model(v), MOI.VariablePrimal(), v)
+function value(v::VariableRef)
+    return MOI.get(owner_model(v), MOI.VariablePrimal(), v)::Float64
+end
 
 """
     has_values(model::Model)
@@ -769,6 +774,7 @@ all_variables(model)
 ```
 """
 function all_variables(model::Model)
-    return VariableRef[VariableRef(model, idx) for idx in
-                        MOI.get(model, MOI.ListOfVariableIndices())]
+    all_indices = MOI.get(
+        model, MOI.ListOfVariableIndices())::Vector{MOI.VariableIndex}
+    return VariableRef[VariableRef(model, idx) for idx in all_indices]
 end
